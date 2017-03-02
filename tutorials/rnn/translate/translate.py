@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -108,9 +109,11 @@ def read_data(source_path, target_path, max_size=None):
         if counter % 100000 == 0:
           print("  reading data line %d" % counter)
           sys.stdout.flush()
+        # 이미 이 상황에서 idx들로 치환된 형태이다...
         source_ids = [int(x) for x in source.split()]
         target_ids = [int(x) for x in target.split()]
         target_ids.append(data_utils.EOS_ID)
+        # 올바른 bucket을 찾아서 들어간다.
         for bucket_id, (source_size, target_size) in enumerate(_buckets):
           if len(source_ids) < source_size and len(target_ids) < target_size:
             data_set[bucket_id].append([source_ids, target_ids])
@@ -171,6 +174,11 @@ def train():
       print("Preparing WMT data in %s" % FLAGS.data_dir)
       from_train, to_train, from_dev, to_dev, _, _ = data_utils.prepare_wmt_data(
           FLAGS.data_dir, FLAGS.from_vocab_size, FLAGS.to_vocab_size)
+  
+  #  from_dev     :   /tmp/newstest2013.en.ids40000
+  #  from_train   :   /tmp/giga-fren.release2.fixed.en.ids40000
+  #  to_dev       :   /tmp/newstest2013.fr.ids40000
+  #  to_train     :   /tmp/giga-fren.release2.fixed.fr.ids40000
 
   with tf.Session() as sess:
     # Create model.
@@ -188,6 +196,7 @@ def train():
     # A bucket scale is a list of increasing numbers from 0 to 1 that we'll use
     # to select a bucket. Length of [scale[i], scale[i+1]] is proportional to
     # the size if i-th training bucket, as used later.
+    # CDF같은거... batch 만들 때 쓰는 것 같음...
     train_buckets_scale = [sum(train_bucket_sizes[:i + 1]) / train_total_size
                            for i in xrange(len(train_bucket_sizes))]
 
@@ -198,7 +207,7 @@ def train():
     while True:
       # Choose a bucket according to data distribution. We pick a random number
       # in [0, 1] and use the corresponding interval in train_buckets_scale.
-      random_number_01 = np.random.random_sample()
+      random_number_01 = np.random.random_sample(). # 요건 uniform sample!
       bucket_id = min([i for i in xrange(len(train_buckets_scale))
                        if train_buckets_scale[i] > random_number_01])
 

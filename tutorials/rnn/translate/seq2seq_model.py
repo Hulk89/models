@@ -1,3 +1,4 @@
+# coding: utf-8
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -227,8 +228,9 @@ class Seq2SeqModel(object):
                        " %d != %d." % (len(target_weights), decoder_size))
 
     # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
+    # input feed에 idx별로 한번에 넣는 듯 하다...
     input_feed = {}
-    for l in xrange(encoder_size):
+    for l in xrange(encoder_size):  # 모든 batch의 idx인 듯...
       input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
     for l in xrange(decoder_size):
       input_feed[self.decoder_inputs[l].name] = decoder_inputs[l]
@@ -281,16 +283,19 @@ class Seq2SeqModel(object):
       # Encoder inputs are padded and then reversed.
       encoder_pad = [data_utils.PAD_ID] * (encoder_size - len(encoder_input))
       encoder_inputs.append(list(reversed(encoder_input + encoder_pad)))
+      # [ PAD, PAD, ., home, go, wanna, I] 요런식으로 되겠지...
 
       # Decoder inputs get an extra "GO" symbol, and are padded then.
       decoder_pad_size = decoder_size - len(decoder_input) - 1
       decoder_inputs.append([data_utils.GO_ID] + decoder_input +
                             [data_utils.PAD_ID] * decoder_pad_size)
+      # [GO, 프랑스어는 모름..., PAD, PAD, PAD]
 
     # Now we create batch-major vectors from the data selected above.
     batch_encoder_inputs, batch_decoder_inputs, batch_weights = [], [], []
 
     # Batch encoder inputs are just re-indexed encoder_inputs.
+    # 위에꺼 transpose 한 것 같은데?;;
     for length_idx in xrange(encoder_size):
       batch_encoder_inputs.append(
           np.array([encoder_inputs[batch_idx][length_idx]
@@ -298,11 +303,14 @@ class Seq2SeqModel(object):
 
     # Batch decoder inputs are re-indexed decoder_inputs, we create weights.
     for length_idx in xrange(decoder_size):
+      # 요거는 위에랑 똑같네...
       batch_decoder_inputs.append(
           np.array([decoder_inputs[batch_idx][length_idx]
                     for batch_idx in xrange(self.batch_size)], dtype=np.int32))
 
       # Create target_weights to be 0 for targets that are padding.
+      # 패딩한 녀석들에 대해서는 weight를 0로 주기위해 만들었다는데... 더 봐야 알겠다..
+      # 패딩이 아니면 1, 패딩이면 0인 것 같다.
       batch_weight = np.ones(self.batch_size, dtype=np.float32)
       for batch_idx in xrange(self.batch_size):
         # We set weight to 0 if the corresponding target is a PAD symbol.
